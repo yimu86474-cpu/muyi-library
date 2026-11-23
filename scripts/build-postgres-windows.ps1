@@ -19,7 +19,7 @@ $src = Join-Path $work "postgresql-$version"
 $build = Join-Path $work 'build'
 $install = Join-Path $work 'install'
 $env:CC = 'cl'
-python -m mesonbuild.mesonmain setup $build $src --prefix $install --libdir lib --buildtype release --auto-features disabled -Dssl=none -Db_vscrt=mt
+python -m mesonbuild.mesonmain setup $build $src --prefix $install --libdir lib --buildtype release --auto-features disabled -Dssl=none -Db_vscrt=md
 python -m mesonbuild.mesonmain compile -C $build
 python -m mesonbuild.mesonmain install -C $build --no-rebuild
 

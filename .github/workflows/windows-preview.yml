@@ -32,7 +32,7 @@ jobs:
           npm.cmd --prefix frontend ci
           npm.cmd --prefix frontend run build
           node --test chrome-extension/tests/*.test.mjs
-          python -m pip install --disable-pip-version-check 'psycopg[binary]==3.3.6' 'pyinstaller==6.22.3' 'certifi==2026.11.20'
+          python -m pip install --disable-pip-version-check 'psycopg==3.3.6' 'typing-extensions==4.16.0' 'pyinstaller==6.22.3' 'certifi==2026.11.20' 'tzdata==2026.6'
       - name: Set up PostgreSQL build tools
         shell: pwsh
         run: |
@@ -87,6 +87,9 @@ jobs:
           python -m pip install --disable-pip-version-check 'psycopg[binary]==3.3.6'
           $env:PATH = "$env:MUYI_TEST_MEDIA_BIN;$env:PATH"
           python -m scripts.smoke_web_capture --postgres-bin $env:PGBIN
+      - name: Install the official Microsoft Visual C++ runtime on the test runner
+        shell: pwsh
+        run: ./scripts/setup-windows-runtime.ps1
       - name: Verify packaged exe with and without media tools
         shell: pwsh
         run: ./scripts/verify-windows-package.ps1
@@ -96,6 +99,7 @@ jobs:
         with:
           name: windows-verification
           path: |
+            ${{ runner.temp }}/muyi-windows-runtime.json
             ${{ runner.temp }}/muyi-verify/readback.json
             ${{ runner.temp }}/muyi-verify/launch-*.log
             ${{ runner.temp }}/muyi-verify/link-only/launch-*.log
@@ -124,7 +128,7 @@ jobs:
         run: |
           npm --prefix frontend ci
           npm --prefix frontend run build
-          python -m pip install --disable-pip-version-check 'psycopg[binary]==3.3.6' 'pyinstaller==6.22.3' 'certifi==2026.11.20'
+          python -m pip install --disable-pip-version-check 'psycopg==3.3.6' 'typing-extensions==4.16.0' 'pyinstaller==6.22.3' 'certifi==2026.11.20'
       - name: Build the self-contained app and disk image
         run: MUYI_BUILD_PYTHON="$(command -v python)" ./scripts/stage-macos-package.sh "$RUNNER_TEMP/muyi-macos-package"
       - name: Verify installed copy with and without media tools

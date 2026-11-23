@@ -4,8 +4,10 @@
 
 | 平台 | 文件 | 操作 |
 | --- | --- | --- |
-| Windows x64 | `MuyiMaterialLibrary-windows-x64.zip` | 解压整个 ZIP，在解压后的目录双击 `MuyiMaterialLibrary.exe`。同目录的 `_internal` 与 `tools` 随程序保留。 |
+| Windows x64 | `MuyiMaterialLibrary-windows-x64.zip` | 先安装下方的微软官方运行库，再解压整个 ZIP，在解压后的目录双击 `MuyiMaterialLibrary.exe`。同目录的 `_internal` 与 `tools` 随程序保留。 |
 | Apple 芯片 Mac | `MuyiMaterialLibrary-macOS-arm64.dmg` | 打开 DMG，把应用拖入「应用程序」，再双击打开。 |
+
+Windows 首次使用前，请安装 **Microsoft Visual C++ v14 Redistributable x64**。如果已安装受支持的版本，直接打开素材库即可。出现 `VCRUNTIME140.dll` 或 `MSVCP140.dll` 缺失提示时，使用微软官方安装程序。 [微软说明](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) · [微软 x64 安装程序](https://aka.ms/vc14/vc_redist.x64.exe)
 
 应用打开后进入本机网页。若浏览器没有自动打开，访问 `http://127.0.0.1:18778`。首次启动会创建空库，内置的 PostgreSQL 会随程序启动和退出，无需额外安装数据库或开发工具。试用包已在 Windows Server 2025 x64 与 macOS 15 Apple Silicon 的自动化环境验收。Windows 11 桌面双击、原生文件夹选择器和交互播放待真机验收。
 
@@ -40,3 +42,21 @@
 退出后备份整个数据目录。本地来源的原件留在你添加的文件夹里，也需要单独备份。恢复时使用同平台、同 PostgreSQL 主版本的软件，保持本地来源路径可用。排错日志为数据目录中的 `runtime/logs/server.log`、`postgres.log` 和 `postgres-launch.log`。
 
 卸载时删除应用或 Windows 解压目录，在 Chrome 的扩展管理页移除收集器。需要继续保留素材库和整理记录时，请保留数据目录、备份及原文件。
+
+## 5. 高级用法：更换 Psycopg
+
+应用加载普通 Python 源文件。随附版本在 Windows 解压目录内的 `_internal/psycopg`，Mac 中在 `MuyiMaterialLibrary.app/Contents/Resources/MuyiMaterialLibrary/_internal/psycopg`。可以用另一个目录内接口兼容、支持 Python 3.11 的纯 Python Psycopg 启动。这个目录应包含 `psycopg/__init__.py`。应用仍使用随包的 PostgreSQL 客户端库。
+
+如需比较或调试其他版本，可在终端用 `python -m pip install --no-deps --target <独立目录> psycopg==<版本>` 准备替换目录，退出素材库，然后从同一个终端启动：
+
+```powershell
+$env:MUYI_PSYCOPG_PATH = 'C:\path\to\replacement-driver'
+.\MuyiMaterialLibrary.exe
+```
+
+```bash
+MUYI_PSYCOPG_PATH="$HOME/muyi-replacement-driver" \
+  /Applications/MuyiMaterialLibrary.app/Contents/MacOS/launcher
+```
+
+正常双击时使用应用自带版本。替换目录及其代码由本机使用者自行选择。

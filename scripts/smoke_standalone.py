@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -15,6 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+DRIVER_MARKER = "Psycopg replacement loaded from the separate test directory"
 CAPTURE_FIXTURES = {
     "douyin": ("7400000000000000001", "https://www.douyin.com/video/7400000000000000001"),
     "xiaohongshu": ("0123456789abcdef01234567", "https://www.xiaohongshu.com/explore/0123456789abcdef01234567"),
@@ -64,12 +66,15 @@ def launcher_settings(work):
 
 
 @contextmanager
-def launch(work, command, attempt, unpacked):
+def launch(work, command, attempt, unpacked, *, driver=None):
     log = work / f"launch-{attempt}.log"
     library, profile_env, flags = launcher_settings(work)
     env = dict(os.environ, MUYI_POSTGRES_PROFILES=str(work / "intentionally-absent.json"),
                MATERIAL_DATABASE_DSN="host=127.0.0.1 port=1", PGPORT="1")
     env.update(profile_env)
+    env.pop("MUYI_PSYCOPG_PATH", None)
+    if driver is not None:
+        env["MUYI_PSYCOPG_PATH"] = str(driver)
     with log.open("wb") as output:
         process = subprocess.Popen(
             [*command, *flags, "--no-browser", "--port", "0"],
@@ -83,6 +88,8 @@ def launch(work, command, attempt, unpacked):
             process.wait(timeout=10)
         raise
     try:
+        if driver is not None:
+            require(DRIVER_MARKER in log.read_text(encoding="utf-8"), "未加载可替换 Psycopg")
         yield base, process.pid
     finally:
         try:
@@ -206,7 +213,17 @@ def check_without_media(work, command, unpacked):
         check_capture_readback(base, capture_ids, library)
 
 
-def check(work, command, ffmpeg, unpacked):
+def prepare_replacement_driver(work, bundle):
+    source = bundle / "_internal" / "psycopg"
+    require((source / "__init__.py").is_file(), "Psycopg 未以可替换源文件分发")
+    replacement = work / "replacement-driver"
+    shutil.copytree(source, replacement / "psycopg")
+    with (replacement / "psycopg" / "__init__.py").open("a", encoding="utf-8") as module:
+        module.write(f"\nprint({DRIVER_MARKER!r}, flush=True)\n")
+    return replacement
+
+
+def check(work, command, ffmpeg, unpacked, driver):
     source = work / "样本 文件夹"
     expected = samples(source, ffmpeg)
     with launch(work, command, 1, unpacked) as (base, first_pid):
@@ -226,7 +243,7 @@ def check(work, command, ffmpeg, unpacked):
         asset = first["测试 图片.png"]
         request(base, f"/api/assets/{asset['id']}/metadata", method="PATCH",
                 data={"note": "重启读回备注", "add_tags": ["合成测试"]})
-    with launch(work, command, 2, unpacked) as (base, second_pid):
+    with launch(work, command, 2, unpacked, driver=driver) as (base, second_pid):
         require(first_pid != second_pid, "未观察到独立进程重启")
         _, bootstrap = request(base, "/api/bootstrap")
         require([row["id"] for row in bootstrap["sources"]] == [new_source["id"]], "来源未持久化")
@@ -243,6 +260,7 @@ def check(work, command, ffmpeg, unpacked):
         "status": "pass", "platform": platform.platform(), "unpacked_bundle": unpacked,
         "launch_pids": [first_pid, second_pid], "assets": ids,
         "first_launch_empty": True, "metadata_survived_restart": True,
+        "replacement_driver_loaded_on_restart": driver is not None,
         "local_only_and_integrations_disabled": True,
         "synthetic_capture_cards_survived_restart": capture_ids,
         "exercised_windows_default_data_directory": os.name == "nt",
@@ -271,6 +289,7 @@ def main():
         require((tools_root / "chrome-extension" / "LICENSE").is_file(), "收集器缺少许可证")
         require((tools_root / "tools" / "postgres" / "LICENSE").is_file(), "PostgreSQL 缺少许可证")
         require(not (tools_root / "tools" / "media").exists(), "包中不应包含媒体工具")
+        require((tools_root / "licenses" / "GPL-3.0.txt").is_file(), "Psycopg 缺少配套 GPL v3 文本")
     if args.postgres_bin:
         command.extend(("--postgres-bin", str(args.postgres_bin.resolve())))
     ffmpeg = "ffmpeg"
@@ -281,7 +300,8 @@ def main():
         media_bin = args.media_bin.resolve()
         command.extend(("--media-bin", str(media_bin)))
         ffmpeg = str(media_bin / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg"))
-    result = check(work, command, args.ffmpeg or ffmpeg, bool(args.launcher))
+    driver = prepare_replacement_driver(work, tools_root) if tools_root else None
+    result = check(work, command, args.ffmpeg or ffmpeg, bool(args.launcher), driver)
     result["link_only_without_media_tools"] = args.check_no_tools
     (work / "readback.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result, ensure_ascii=True, indent=2))

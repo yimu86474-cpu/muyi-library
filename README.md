@@ -18,7 +18,7 @@
 | Windows x64 | `MuyiMaterialLibrary-windows-x64.zip` | 解压完整目录，双击 `MuyiMaterialLibrary.exe`。 |
 | Apple 芯片 Mac | `MuyiMaterialLibrary-macOS-arm64.dmg` | 打开 DMG，把应用拖到「应用程序」，再双击打开。 |
 
-应用自带 PostgreSQL，首次打开是一个空库。仅收藏网页链接时可以直接使用。要导入文件夹、生成预览或保存网页原件，请按说明自行安装 FFmpeg 和 FFprobe，随后重启素材库。备份、卸载、运行要求和收集器配对见 [安装与使用](docs/INSTALL.zh-CN.md)。
+应用自带 PostgreSQL，首次打开是一个空库。Windows 先按安装说明准备微软官方 Visual C++ x64 运行库。仅收藏网页链接时可以直接使用。要导入文件夹、生成预览或保存网页原件，请按说明自行安装 FFmpeg 和 FFprobe，随后重启素材库。备份、卸载、运行要求和收集器配对见 [安装与使用](docs/INSTALL.zh-CN.md)。
 
 ## 开发与反馈
 

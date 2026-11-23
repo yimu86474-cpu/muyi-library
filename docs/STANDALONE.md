@@ -32,7 +32,7 @@ npm.cmd --prefix frontend run build
 
 ## 打包和验收
 
-[GitHub Actions 工作流](../.github/workflows/windows-preview.yml) 构建同一提交的 Windows x64 和 Apple 芯片 Mac 包，包含独立 PostgreSQL。工作流中列明构建工具版本、脚本顺序和测试产物。Windows 使用 MSVC 和 Meson，Mac 使用 Xcode 命令行工具和 Make。两边的构建脚本从 PostgreSQL 官方归档下载对应源码并校验 SHA-256。
+[GitHub Actions 工作流](../.github/workflows/windows-preview.yml) 构建同一提交的 Windows x64 和 Apple 芯片 Mac 包，包含独立 PostgreSQL。工作流中列明构建工具版本、脚本顺序和测试产物。Windows 使用 MSVC 和 Meson，Mac 使用 Xcode 命令行工具和 Make。Windows 包由微软官方运行库提供所需 DLL，验收工作流会独立下载并验证微软签名。两边的构建脚本从 PostgreSQL 官方归档下载对应源码并校验 SHA-256。
 
 `scripts/smoke_standalone.py` 在新测试目录中运行。它验证无媒体工具时的链接收藏、安装工具后的图片和视频导入、缩略图、视频分段读取、原件字节、重启读回及数据库退出。例：
 
@@ -41,6 +41,8 @@ npm.cmd --prefix frontend run build
 ```
 
 Chrome 收集器的解析测试通过 `node --test chrome-extension/tests/*.test.mjs` 运行。发布验收还需在实际桌面双击启动、添加文件夹、预览图片和播放视频。
+
+打包使用纯 Python 的 `psycopg`，它与源码开发环境的可选 `psycopg[binary]` 安装方式相互独立。PyInstaller 将 Psycopg 源文件放在 `_internal/psycopg`，驱动加载随 PostgreSQL 服务端一起编译的 libpq。安装包验收在首次启动后，用单独目录里的替换驱动重启并核对数据。替换步骤见 [安装说明](INSTALL.zh-CN.md#5-高级用法更换-psycopg)。
 
 ## 本机排错
 
