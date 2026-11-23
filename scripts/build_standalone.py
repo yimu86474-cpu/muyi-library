@@ -48,8 +48,8 @@ def copy_licenses(bundle: Path) -> None:
         shutil.copy2(source, licenses / f"{name}.txt")
 
     openssl = re.match(r"OpenSSL (3\.\d+\.\d+)", ssl.OPENSSL_VERSION)
-    if not openssl:
-        raise ValueError(f"无法识别 OpenSSL 3 构建版本 {ssl.OPENSSL_VERSION}")
+    if not openssl or ssl.OPENSSL_VERSION_INFO[:2] != (3, 5) or ssl.OPENSSL_VERSION_INFO[2] < 9:
+        raise ValueError(f"桌面安装包需要 OpenSSL 3.5 LTS 的 3.5.9 或更新补丁，当前为 {ssl.OPENSSL_VERSION}")
     version = openssl[1]
     upstream = f"https://raw.githubusercontent.com/openssl/openssl/openssl-{version}/LICENSE.txt"
     subprocess.run([

@@ -45,7 +45,7 @@ Windows 首次使用前，请安装 **Microsoft Visual C++ v14 Redistributable x
 
 ## 5. 高级用法：更换 Psycopg
 
-应用加载普通 Python 源文件。随附版本在 Windows 解压目录内的 `_internal/psycopg`，Mac 中在 `MuyiMaterialLibrary.app/Contents/Resources/MuyiMaterialLibrary/_internal/psycopg`。可以用另一个目录内接口兼容、支持 Python 3.11 的纯 Python Psycopg 启动。这个目录应包含 `psycopg/__init__.py`。应用仍使用随包的 PostgreSQL 客户端库。
+应用加载普通 Python 源文件。随附版本在 Windows 解压目录内的 `_internal/psycopg`，Mac 中在 `MuyiMaterialLibrary.app/Contents/Resources/MuyiMaterialLibrary/_internal/psycopg`。可以用另一个目录内接口兼容、支持 Python 3.14 的纯 Python Psycopg 启动。这个目录应包含 `psycopg/__init__.py`。应用仍使用随包的 PostgreSQL 客户端库。
 
 如需比较或调试其他版本，可在终端用 `python -m pip install --no-deps --target <独立目录> psycopg==<版本>` 准备替换目录，退出素材库，然后从同一个终端启动：
 

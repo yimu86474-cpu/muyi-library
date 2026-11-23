@@ -213,6 +213,15 @@ def check_without_media(work, command, unpacked):
         check_capture_readback(base, capture_ids, library)
 
 
+def packaged_runtime(command, bundle):
+    description = subprocess.check_output([*command, "--version"], text=True, encoding="utf-8", timeout=30).strip()
+    matched = re.fullmatch(r"Python (\d+\.\d+\.\d+), OpenSSL (3\.5\.(\d+))(?:[ \t]+.*)?", description)
+    require(matched is not None and int(matched[3]) >= 9, f"安装包使用了不受支持的 OpenSSL 版本。{description}")
+    declared = (bundle / "licenses" / "OpenSSL-SOURCE.txt").read_text(encoding="utf-8").splitlines()[0]
+    require(declared == f"OpenSSL {matched[2]}", "OpenSSL 运行版本与随包许可证记录不一致")
+    return {"python": matched[1], "openssl": matched[2]}
+
+
 def prepare_replacement_driver(work, bundle):
     source = bundle / "_internal" / "psycopg"
     require((source / "__init__.py").is_file(), "Psycopg 未以可替换源文件分发")
@@ -290,6 +299,7 @@ def main():
         require((tools_root / "tools" / "postgres" / "LICENSE").is_file(), "PostgreSQL 缺少许可证")
         require(not (tools_root / "tools" / "media").exists(), "包中不应包含媒体工具")
         require((tools_root / "licenses" / "GPL-3.0.txt").is_file(), "Psycopg 缺少配套 GPL v3 文本")
+    runtime = packaged_runtime(command, tools_root) if tools_root else None
     if args.postgres_bin:
         command.extend(("--postgres-bin", str(args.postgres_bin.resolve())))
     ffmpeg = "ffmpeg"
@@ -303,6 +313,8 @@ def main():
     driver = prepare_replacement_driver(work, tools_root) if tools_root else None
     result = check(work, command, args.ffmpeg or ffmpeg, bool(args.launcher), driver)
     result["link_only_without_media_tools"] = args.check_no_tools
+    if runtime:
+        result["packaged_runtime"] = runtime
     (work / "readback.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result, ensure_ascii=True, indent=2))
 

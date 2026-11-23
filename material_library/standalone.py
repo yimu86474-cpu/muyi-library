@@ -3,6 +3,8 @@
 import argparse
 import json
 import os
+import platform
+import ssl
 import sys
 import webbrowser
 from pathlib import Path
@@ -69,6 +71,7 @@ def run(args) -> None:
 def main() -> int:
     frontend, tools = bundled_paths()
     parser = argparse.ArgumentParser(description="独立启动木易素材库试用版")
+    parser.add_argument("--version", action="version", version=f"Python {platform.python_version()}, {ssl.OPENSSL_VERSION}")
     parser.add_argument("--data-dir", type=Path, default=default_data_dir(), help="此试用版专用的数据目录")
     parser.add_argument("--frontend", type=Path, default=frontend, help="独立构建的网页目录")
     parser.add_argument("--postgres-bin", type=Path, default=tools / "postgres" / "bin")

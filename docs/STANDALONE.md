@@ -4,12 +4,12 @@
 
 ## 源码启动
 
-准备 Python 3.11、Node.js 24 和 PostgreSQL 二进制。需要测试图片、视频处理时，另在本机安装 FFmpeg 和 FFprobe。首次运行请把 `--data-dir` 指向单独的测试目录。
+准备 Python 3.14、Node.js 24 和 PostgreSQL 二进制。需要测试图片、视频处理时，另在本机安装 FFmpeg 和 FFprobe。首次运行请把 `--data-dir` 指向单独的测试目录。
 
 ### Apple 芯片 Mac
 
 ```bash
-python3.11 -m venv .venv-standalone
+python3.14 -m venv .venv-standalone
 .venv-standalone/bin/python -m pip install 'psycopg[binary]==3.3.6'
 npm --prefix frontend ci
 npm --prefix frontend run build
@@ -20,7 +20,7 @@ npm --prefix frontend run build
 ### Windows x64
 
 ```powershell
-py -3.11 -m venv .venv-standalone
+py -3.14 -m venv .venv-standalone
 $python = ".\.venv-standalone\Scripts\python.exe"
 & $python -m pip install 'psycopg[binary]==3.3.6'
 npm.cmd --prefix frontend ci
@@ -32,7 +32,7 @@ npm.cmd --prefix frontend run build
 
 ## 打包和验收
 
-[GitHub Actions 工作流](../.github/workflows/windows-preview.yml) 构建同一提交的 Windows x64 和 Apple 芯片 Mac 包，包含独立 PostgreSQL。工作流中列明构建工具版本、脚本顺序和测试产物。Windows 使用 MSVC 和 Meson，Mac 使用 Xcode 命令行工具和 Make。Windows 包由微软官方运行库提供所需 DLL，验收工作流会独立下载并验证微软签名。两边的构建脚本从 PostgreSQL 官方归档下载对应源码并校验 SHA-256。
+[GitHub Actions 工作流](../.github/workflows/windows-preview.yml) 构建同一提交的 Windows x64 和 Apple 芯片 Mac 包，包含独立 PostgreSQL。工作流中列明构建工具版本、脚本顺序和测试产物。Windows 使用 MSVC 和 Meson，Mac 使用 Xcode 命令行工具和 Make。Windows 包由微软官方运行库提供所需 DLL，验收工作流会独立下载并验证微软签名。两边的构建脚本从 PostgreSQL 官方归档下载对应源码并校验 SHA-256。桌面包固定使用 CPython 3.14.10，并要求 OpenSSL 3.5 LTS 的 3.5.9 或更新补丁。验收运行包内程序的 `--version` 读取实际加载版本，并与随包的 OpenSSL 许可证记录核对。
 
 `scripts/smoke_standalone.py` 在新测试目录中运行。它验证无媒体工具时的链接收藏、安装工具后的图片和视频导入、缩略图、视频分段读取、原件字节、重启读回及数据库退出。例：
 
