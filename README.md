@@ -11,7 +11,7 @@
 
 ## 安装
 
-在 [GitHub Releases](https://github.com/yimu86474-cpu/muyi-material-library/releases) 下载当前试用包、Chrome 收集器和中文说明。安装前以 Release 标明的版本和平台为准。
+这里是木易素材库的独立版源码仓库。桌面包发布后可在 [GitHub Releases](https://github.com/yimu86474-cpu/muyi-material-library-source/releases) 下载。已有试用用户可以继续使用原有下载地址。
 
 | 系统 | 软件包 | 启动 |
 | --- | --- | --- |
@@ -24,6 +24,6 @@
 
 前端使用 Vue 和 Vite，Python 服务在本机运行，PostgreSQL 保存索引。[独立版开发说明](docs/STANDALONE.md) 包含源码启动、打包和隔离验收命令。
 
-遇到问题可在 [Issues](https://github.com/yimu86474-cpu/muyi-material-library/issues) 提交操作系统、版本、复现步骤和已去除个人信息的日志片段。
+遇到问题可在 [Issues](https://github.com/yimu86474-cpu/muyi-material-library-source/issues) 提交操作系统、版本、复现步骤和已去除个人信息的日志片段。
 
-项目代码与收集器采用 [MIT 许可证](LICENSE)。安装包内的依赖适用各自的 [第三方许可](THIRD_PARTY_NOTICES.md)。
+项目代码与收集器采用 [MIT 许可证](LICENSE)。安装包内的依赖适用各自的 [第三方许可](THIRD_PARTY_NOTICES.md)。现有试用包的组件版本、已附许可和公开分发待办见 [第三方许可证核对](docs/DISTRIBUTION-LICENSES.md)。
