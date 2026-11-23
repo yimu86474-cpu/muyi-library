@@ -47,8 +47,8 @@ def copy_licenses(bundle: Path) -> None:
         source = ROOT / "frontend" / "node_modules" / name / "LICENSE"
         shutil.copy2(source, licenses / f"{name}.txt")
 
-    openssl = re.match(r"OpenSSL (3\.\d+\.\d+)", ssl.OPENSSL_VERSION)
-    if not openssl or ssl.OPENSSL_VERSION_INFO[:2] != (3, 5) or ssl.OPENSSL_VERSION_INFO[2] < 9:
+    openssl = re.match(r"OpenSSL (3\.5\.(\d+))(?:[ \t]|$)", ssl.OPENSSL_VERSION)
+    if not openssl or int(openssl[2]) < 9:
         raise ValueError(f"桌面安装包需要 OpenSSL 3.5 LTS 的 3.5.9 或更新补丁，当前为 {ssl.OPENSSL_VERSION}")
     version = openssl[1]
     upstream = f"https://raw.githubusercontent.com/openssl/openssl/openssl-{version}/LICENSE.txt"
