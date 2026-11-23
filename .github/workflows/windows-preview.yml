@@ -1,0 +1,149 @@
+name: Windows and macOS portable previews
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portable-previews
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Windows x64 package
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+          architecture: x64
+      - name: Build frontend and install packaging tools
+        shell: pwsh
+        run: |
+          npm.cmd --prefix frontend ci
+          npm.cmd --prefix frontend run build
+          node --test chrome-extension/tests/*.test.mjs
+          python -m pip install --disable-pip-version-check 'psycopg[binary]==3.3.6' 'pyinstaller==6.22.3' 'certifi==2026.11.20'
+      - name: Set up PostgreSQL build tools
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check 'meson==1.10.1' 'ninja==1.13.0'
+          $archive = Join-Path $env:RUNNER_TEMP 'win-flex-bison.zip'
+          $tools = Join-Path $env:RUNNER_TEMP 'win-flex-bison'
+          curl.exe --fail --silent --show-error --location --retry 2 --max-time 60 --output $archive https://github.com/lexxmark/winflexbison/releases/download/v2.5.25/win_flex_bison-2.5.25.zip
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash -ne '8d324b62be33604b2c45ad1dd34ab93d722534448f55a16ca7292de32b6ac135') {
+            throw 'WinFlexBison archive SHA-256 mismatch.'
+          }
+          Expand-Archive -LiteralPath $archive -DestinationPath $tools
+          Add-Content -Path $env:GITHUB_PATH -Value $tools
+      - name: Build and bundle PostgreSQL
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products '*' -property installationPath
+          Import-Module "$vs\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
+          Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
+          ./scripts/stage-windows-package.ps1
+      - name: Retain Windows test package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-x64-portable
+          path: ${{ runner.temp }}/muyi-package/upload/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+  verify:
+    name: Verify a fresh install and restart
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+          architecture: x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: windows-x64-portable
+          path: ${{ runner.temp }}/muyi-download
+      - name: Set up test-only FFmpeg
+        shell: pwsh
+        run: ./scripts/setup-windows-test-media.ps1
+      - name: Verify web capture with synthetic media
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check 'psycopg[binary]==3.3.6'
+          $env:PATH = "$env:MUYI_TEST_MEDIA_BIN;$env:PATH"
+          python -m scripts.smoke_web_capture --postgres-bin $env:PGBIN
+      - name: Verify packaged exe with and without media tools
+        shell: pwsh
+        run: ./scripts/verify-windows-package.ps1
+      - name: Retain verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-verification
+          path: |
+            ${{ runner.temp }}/muyi-verify/readback.json
+            ${{ runner.temp }}/muyi-verify/launch-*.log
+            ${{ runner.temp }}/muyi-verify/link-only/launch-*.log
+            ${{ runner.temp }}/muyi-verify/Local AppData/MuyiMaterialLibraryPreview/postgres.log
+            ${{ runner.temp }}/muyi-verify/Local AppData/MuyiMaterialLibraryPreview/postgres-launch.log
+            ${{ runner.temp }}/muyi-verify/Local AppData/MuyiMaterialLibraryPreview/runtime/logs/server.log
+          if-no-files-found: warn
+          retention-days: 3
+
+  macos:
+    name: Build and verify macOS Apple Silicon
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+          architecture: arm64
+      - name: Build frontend and install packaging tools
+        run: |
+          npm --prefix frontend ci
+          npm --prefix frontend run build
+          python -m pip install --disable-pip-version-check 'psycopg[binary]==3.3.6' 'pyinstaller==6.22.3' 'certifi==2026.11.20'
+      - name: Build the self-contained app and disk image
+        run: MUYI_BUILD_PYTHON="$(command -v python)" ./scripts/stage-macos-package.sh "$RUNNER_TEMP/muyi-macos-package"
+      - name: Verify installed copy with and without media tools
+        run: |
+          if ! command -v ffmpeg || ! command -v ffprobe || ! ffmpeg -hide_banner -encoders 2>/dev/null | grep libx264 >/dev/null; then
+            brew install ffmpeg-full
+            export MUYI_TEST_MEDIA_BIN="$(brew --prefix ffmpeg-full)/bin"
+          else
+            export MUYI_TEST_MEDIA_BIN="$(dirname "$(command -v ffmpeg)")"
+          fi
+          MUYI_BUILD_PYTHON="$(command -v python)" ./scripts/verify-macos-package.sh \
+            "$RUNNER_TEMP/muyi-macos-package/MuyiMaterialLibrary-macOS-arm64.dmg" "$RUNNER_TEMP/muyi-macos-verification"
+      - name: Retain verified Mac package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-arm64-preview
+          path: |
+            ${{ runner.temp }}/muyi-macos-package/
+            ${{ runner.temp }}/muyi-macos-verification/readback.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3

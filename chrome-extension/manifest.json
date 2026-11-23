@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "木易素材库收集器",
+  "version": "0.5.1",
+  "description": "用 Alt 或 Option 点选网页图片和视频，收藏到 Windows 或 macOS 上的木易素材库。",
+  "permissions": ["activeTab", "scripting", "storage", "notifications"],
+  "host_permissions": ["http://127.0.0.1:18778/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*", "https://www.x.com/*", "https://twitter.com/*", "https://www.twitter.com/*"],
+      "js": ["extractor.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://www.xiaohongshu.com/*", "https://xiaohongshu.com/*"],
+      "js": ["xiaohongshu-media-bridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.douyin.com/*"],
+      "js": ["douyin-media-bridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["extractor.js", "quick-capture.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "capture-visible-video": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+8",
+        "mac": "Command+Shift+8"
+      },
+      "description": "点选网页上的视频或图片并收进木易素材库"
+    }
+  },
+  "action": {
+    "default_title": "木易素材库：按住 Alt 或 Option 点选，或点击图标进入点选模式"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

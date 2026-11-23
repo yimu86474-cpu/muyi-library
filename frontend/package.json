@@ -1,0 +1,17 @@
+{
+  "name": "muyi-material-library-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5179",
+    "build": "vite build",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "latest",
+    "hls.js": "^1.7.1",
+    "vite": "latest",
+    "vue": "latest"
+  }
+}

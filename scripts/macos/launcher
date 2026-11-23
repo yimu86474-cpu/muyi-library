@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+resources="$(cd "$(dirname "$0")/../Resources/MuyiMaterialLibrary" && pwd)"
+exec "$resources/MuyiMaterialLibrary" "$@"
