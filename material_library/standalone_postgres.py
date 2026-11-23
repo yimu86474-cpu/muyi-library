@@ -1,6 +1,7 @@
 """Initialize and supervise a private PostgreSQL cluster for the standalone library."""
 
 import os
+import re
 import secrets
 import socket
 import subprocess
@@ -39,6 +40,26 @@ def free_loopback_port() -> int:
         return reservation.getsockname()[1]
 
 
+def grant_windows_postgres_access(*directories: Path) -> None:
+    """Allow PostgreSQL's restricted Windows token to use a private directory."""
+    system = Path(os.environ["SystemRoot"]) / "System32"
+    try:
+        identity = subprocess.check_output(
+            [str(system / "whoami.exe"), "/user", "/fo", "csv", "/nh"], timeout=10,
+        )
+        sid = re.search(rb"S-1-\d+(?:-\d+)+", identity)
+        if not sid:
+            raise RuntimeError("无法识别当前 Windows 用户以初始化独立数据库")
+        access = f"*{sid[0].decode('ascii')}:(OI)(CI)F"
+        for directory in directories:
+            subprocess.run(
+                [str(system / "icacls.exe"), str(directory), "/grant:r", access, "/q"],
+                check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15,
+            )
+    except subprocess.SubprocessError as error:
+        raise RuntimeError("无法为当前 Windows 用户设置独立数据库目录权限") from error
+
+
 class StandalonePostgres:
     def __init__(self, root: Path, binaries: Path):
         self.root = root
@@ -71,6 +92,9 @@ class StandalonePostgres:
             return
         with tempfile.TemporaryDirectory(prefix=".creating-", dir=self.root) as working:
             staging = Path(working)
+            if os.name == "nt":
+                # initdb drops the administrator group and must retain the user's own access.
+                grant_windows_postgres_access(self.root, staging)
             data = staging / "data"
             password = secrets.token_urlsafe(32)
             password_file = staging / "password"
